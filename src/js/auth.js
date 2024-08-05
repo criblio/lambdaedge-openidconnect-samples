@@ -67,6 +67,9 @@ async function authenticate(evt) {
 	const queryString = QueryString.parse(querystring);
 	log.info(config.CALLBACK_PATH);
 	log.info(request.uri);
+        var uri = request.uri;
+    
+
 	if (request.uri.startsWith(config.CALLBACK_PATH)) {
 		// log.info('callback from OIDC provider received');
 		if (queryString.error) {
@@ -78,6 +81,14 @@ async function authenticate(evt) {
 		}
 		return getNewJwtResponse({ evt, request, queryString, headers });
 	}
+        // Check whether the URI is missing a file name.
+        if (uri.endsWith('/')) {
+            request.uri += 'index.html';
+        } 
+        // Check whether the URI is missing a file extension.
+        else if (!uri.includes('.')) {
+            request.uri += '/index.html';
+        }
 	if ('cookie' in headers && 'TOKEN' in Cookie.parse(headers.cookie[0].value)) {
 		return getVerifyJwtResponse(request, headers);
 	} // log.info('redirecting to OIDC provider');
@@ -238,7 +249,7 @@ async function fetchConfigFromSecretsManager(evt) {
 	// Get Secrets Manager Config Key from File since we cannot use environment variables.
 	if (secretId == undefined) {
 		try {
-			secretId = "cloudfront/" + evt.Records[0].cf.config.distributionId;
+			secretId = "arn:aws:secretsmanager:us-east-1::secret:cloudfront/" + evt.Records[0].cf.config.distributionId;
 		} catch (err) {
 			log.error(err);
 		}
@@ -343,6 +354,7 @@ function getRedirectPayload({ evt, queryString, decodedToken, headers }) {
 						}),
 						{
 							path: '/',
+							secure: true,
 							maxAge: config.SESSION_DURATION
 						}
 					)
